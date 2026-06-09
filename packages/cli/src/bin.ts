@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 import { buildProgram } from "./program.js";
-import { EXIT } from "./exit-code.js";
+import { runScanCommand } from "./run-scan.js";
 
-const program = buildProgram(() => {
-  // Engine lands in Plan 03; the CLI contract exists now so CI wiring can start early.
-  console.error("authzscan: scan engine not implemented yet (Plan 03)");
-  process.exit(EXIT.ERROR);
+const program = buildProgram((repo, opts) => {
+  void runScanCommand(repo, opts);
 });
 
 program.parse();

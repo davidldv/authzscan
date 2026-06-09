@@ -5,6 +5,7 @@
   "type": "module",
   "bin": { "authzscan": "./src/bin.ts" },
   "dependencies": {
+    "@authzscan/engine": "workspace:*",
     "@authzscan/shared": "workspace:*",
     "commander": "^14.0.0"
   }
