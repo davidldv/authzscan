@@ -7,3 +7,4 @@ export * from "./extract.js";
 export * from "./runner.js";
 export * from "./anthropic-runner.js";
 export * from "./trace.js";
+export * from "./verify.js";
