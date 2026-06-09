@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderReport > renders deterministic markdown snapshot 1`] = `
+"# authzscan report
+
+- **Repo:** C:/Users/Alejandro/Dev/labodega
+- **Generated:** 2026-06-09T12:00:00Z
+- **Coverage:** 44/47 endpoints analyzed, 3 not scanned
+- **Result:** 1 confirmed finding
+
+## Unscanned endpoints
+
+These endpoints were NOT analyzed. Do not treat this report as a clean bill for them.
+
+- \`ep_x\`
+- \`ep_y\`
+- \`ep_z\`
+
+## [HIGH] Order fetched without ownership check
+
+findUnique keyed only on id.
+
+**Evidence:**
+
+- \`app/api/orders/[id]/route.ts:12-18\` — no userId filter
+
+**Reproduction:**
+
+GET other user's order id with own session.
+
+**Suggested fix:**
+
+Scope query by session.user.id.
+"
+`;
