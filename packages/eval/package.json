@@ -1,0 +1,14 @@
+{
+  "name": "@authzscan/eval",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@authzscan/engine": "workspace:*",
+    "@authzscan/inventory": "workspace:*",
+    "@authzscan/shared": "workspace:*",
+    "commander": "^14.0.0",
+    "zod": "^4.0.0"
+  }
+}
