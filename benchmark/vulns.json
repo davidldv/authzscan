@@ -1,0 +1,14 @@
+{
+  "vulns": [
+    { "id": "V1", "file": "app/api/orders/[id]/route.ts", "type": "direct-fetch", "difficulty": "easy", "description": "GET fetches order by client id; session checked but query not scoped to user" },
+    { "id": "V2", "file": "app/api/documents/[id]/route.ts", "type": "direct-fetch", "difficulty": "easy", "description": "GET fetches document by id with no auth at all" },
+    { "id": "V3", "file": "app/api/comments/[id]/route.ts", "type": "unchecked-mutation", "difficulty": "easy", "description": "DELETE removes comment by client id without ownership check" },
+    { "id": "V4", "file": "app/api/addresses/[id]/route.ts", "type": "unchecked-mutation", "difficulty": "easy", "description": "PUT updates address by client id without ownership check" },
+    { "id": "V5", "file": "app/cards/actions.ts", "type": "unchecked-action", "difficulty": "easy", "description": "deleteCard server action deletes by client id without ownership check" },
+    { "id": "V6", "file": "app/api/attachments/[id]/route.ts", "type": "direct-fetch", "difficulty": "easy", "description": "GET fetches attachment by id with no auth" }
+  ],
+  "cleanFiles": [
+    "app/api/notes/[id]/route.ts",
+    "app/api/cards/[id]/route.ts"
+  ]
+}
