@@ -1,0 +1,11 @@
+{
+  "name": "@authzscan/inventory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@authzscan/shared": "workspace:*",
+    "ts-morph": "^26.0.0"
+  }
+}
