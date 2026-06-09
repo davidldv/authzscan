@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderEvalReport > is a stable snapshot 1`] = `
+"# authzscan eval report
+
+- **Model:** claude-fable-5
+- **Generated:** 2026-06-09T12:00:00Z
+- **Runs:** 2
+
+## Aggregate
+
+- Recall: 87.5% (±0.0%)
+- Precision: 78.0% (±0.0%)
+- Cost per scan: $2.34 (±$0.00)
+- Duration per scan: 90s
+
+## Gates
+
+- recall gate (>=80%): PASS
+- precision gate (>=70%): PASS
+
+## Per run
+
+| run | recall | precision | TP | FP | unknown | matched vulns | cost |
+|---|---|---|---|---|---|---|---|
+| 1 | 87.5% | 78.0% | 0 | 0 | 0 | V1 V2 | $2.34 |
+| | easy 6/6 | medium 5/6 | hard 3/4 | | | | |
+| 2 | 87.5% | 78.0% | 0 | 0 | 0 | V1 V2 | $2.34 |
+| | easy 6/6 | medium 5/6 | hard 3/4 | | | | |
+"
+`;
