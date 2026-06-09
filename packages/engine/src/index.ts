@@ -8,3 +8,4 @@ export * from "./runner.js";
 export * from "./anthropic-runner.js";
 export * from "./trace.js";
 export * from "./verify.js";
+export * from "./scan.js";
