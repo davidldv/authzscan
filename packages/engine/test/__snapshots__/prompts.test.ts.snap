@@ -1,0 +1,86 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`prompts > trace prompt is a stable snapshot 1`] = `
+"Analyze the endpoint group "/api/orders" for missing object-level authorization.
+
+Repository auth context (how THIS repo does auth — judge endpoints against these idioms):
+{
+  "library": "next-auth",
+  "sessionAccessPatterns": [
+    "getServerSession"
+  ],
+  "ownershipIdioms": [
+    "{ id, userId: session.user.id }"
+  ]
+}
+
+Endpoints in this group:
+[
+  {
+    "id": "ep_orders",
+    "kind": "route-handler",
+    "file": "app/api/orders/[id]/route.ts",
+    "method": "GET",
+    "routePath": "/api/orders/[id]",
+    "params": [
+      "id"
+    ],
+    "usesDb": true,
+    "authIndicators": [
+      "getServerSession"
+    ]
+  }
+]
+
+For each endpoint: read its file, trace every client-controlled identifier (route params, body fields, query params) to the database query it reaches, and decide whether the query is scoped to the requesting user/tenant. A query keyed only by the client-supplied id, with no ownership filter and no prior ownership check, is a candidate finding. Mutations (DELETE/PUT/PATCH/actions) deserve extra scrutiny — a check on GET does not protect its sibling DELETE.
+
+Reply with ONLY a JSON array of candidate findings (empty array if none), each object exactly:
+{
+  "id": "<unique slug>",
+  "endpointId": "<endpoint id from the list above>",
+  "title": "<one line>",
+  "description": "<what is fetched/mutated and what check is missing>",
+  "evidence": [{ "file": "<repo-relative path>", "startLine": <int>, "endLine": <int>, "note": "<why this span matters>" }]
+}"
+`;
+
+exports[`prompts > verify prompt is a stable snapshot 1`] = `
+"You are now adversarially verifying a candidate IDOR finding produced by a previous reviewer. Your job is to kill false positives: re-read the cited code yourself and either prove the issue real with a concrete scenario, or reject it.
+
+Repository auth context:
+{
+  "library": "next-auth",
+  "sessionAccessPatterns": [
+    "getServerSession"
+  ],
+  "ownershipIdioms": [
+    "{ id, userId: session.user.id }"
+  ]
+}
+
+Candidate finding:
+{
+  "id": "f1",
+  "endpointId": "ep_orders",
+  "title": "t",
+  "description": "d",
+  "evidence": [
+    {
+      "file": "app/api/orders/[id]/route.ts",
+      "startLine": 1,
+      "endLine": 2,
+      "note": "n"
+    }
+  ]
+}
+
+Re-read the evidence files. Check for: middleware that already scopes the request, ownership checks earlier in the call chain, framework-level protections, and whether the identifier is truly client-controlled. Confirm ONLY if you can articulate a concrete unauthorized-access scenario (user A's session reaching user B's resource).
+
+Reply with ONLY one JSON object exactly:
+{
+  "verdict": "confirmed" | "rejected",
+  "confidence": "high" | "medium" | "low",
+  "reproduction": "<concrete scenario, or why it was rejected>",
+  "suggestedFix": "<minimal code change, or empty string if rejected>"
+}"
+`;
