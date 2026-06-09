@@ -1,0 +1,15 @@
+{
+  "name": "@authzscan/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.102.0",
+    "@authzscan/inventory": "workspace:*",
+    "@authzscan/shared": "workspace:*",
+    "zod": "^4.0.0"
+  }
+}
