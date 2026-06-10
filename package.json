@@ -7,7 +7,9 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "pnpm -r exec tsc --noEmit"
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "eval": "tsx packages/eval/src/bin.ts",
+    "eval:fake": "tsx packages/eval/src/bin.ts --fake --runs 1"
   },
   "devDependencies": {
     "@types/node": "^20.19.42",
