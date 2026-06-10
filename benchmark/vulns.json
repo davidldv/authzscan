@@ -1,0 +1,28 @@
+{
+  "vulns": [
+    { "id": "V1", "file": "app/api/orders/[id]/route.ts", "type": "direct-fetch", "difficulty": "easy", "description": "GET fetches order by client id; session checked but query not scoped to user" },
+    { "id": "V2", "file": "app/api/documents/[id]/route.ts", "type": "direct-fetch", "difficulty": "easy", "description": "GET fetches document by id with no auth at all" },
+    { "id": "V3", "file": "app/api/comments/[id]/route.ts", "type": "unchecked-mutation", "difficulty": "easy", "description": "DELETE removes comment by client id without ownership check" },
+    { "id": "V4", "file": "app/api/addresses/[id]/route.ts", "type": "unchecked-mutation", "difficulty": "easy", "description": "PUT updates address by client id without ownership check" },
+    { "id": "V5", "file": "app/cards/actions.ts", "type": "unchecked-action", "difficulty": "easy", "description": "deleteCard server action deletes by client id without ownership check" },
+    { "id": "V6", "file": "app/api/attachments/[id]/route.ts", "type": "direct-fetch", "difficulty": "easy", "description": "GET fetches attachment by id with no auth" },
+    { "id": "V7", "file": "app/api/invoices/[id]/route.ts", "type": "method-asymmetry", "difficulty": "medium", "description": "GET scoped to user; DELETE in same file deletes by raw client id" },
+    { "id": "V8", "file": "app/profile/actions.ts", "type": "wrong-subject", "difficulty": "medium", "description": "updateProfile mutates the userId passed by the client, not the session user" },
+    { "id": "V9", "file": "app/api/projects/[projectId]/tasks/route.ts", "type": "missing-tenancy", "difficulty": "medium", "description": "task list filtered only by client projectId; no membership check" },
+    { "id": "V10", "file": "app/api/orders/transfer/route.ts", "type": "unchecked-mutation", "difficulty": "medium", "description": "POST transfers order ownership using body orderId without verifying caller owns it" },
+    { "id": "V11", "file": "app/reports/actions.ts", "type": "unchecked-action", "difficulty": "medium", "description": "exportReport checks session exists but never report ownership" },
+    { "id": "V12", "file": "app/api/subscriptions/[id]/route.ts", "type": "check-after-write", "difficulty": "medium", "description": "PATCH mutates subscription before the ownership comparison; check only logs" },
+    { "id": "V13", "file": "app/api/orders/[id]/invoice/route.ts", "type": "indirect-reference", "difficulty": "hard", "description": "invoice fetched via order id relation; order ownership never verified" },
+    { "id": "V14", "file": "app/api/search/route.ts", "type": "raw-sql-tenancy", "difficulty": "hard", "description": "$queryRawUnsafe filters by client-supplied accountId (and is injectable)" },
+    { "id": "V15", "file": "app/documents/actions.ts", "type": "wrong-subject-check", "difficulty": "hard", "description": "shareDocument checks ownership against the recipient, not the caller; any doc can be shared" },
+    { "id": "V16", "file": "app/api/teams/[teamId]/members/route.ts", "type": "unscoped-check", "difficulty": "hard", "description": "membership lookup omits userId — any existing team passes the check for any caller" }
+  ],
+  "cleanFiles": [
+    "app/api/notes/[id]/route.ts",
+    "app/api/cards/[id]/route.ts",
+    "app/notes/actions.ts",
+    "app/api/projects/[projectId]/route.ts",
+    "app/api/profile/route.ts",
+    "app/api/invoices/route.ts"
+  ]
+}

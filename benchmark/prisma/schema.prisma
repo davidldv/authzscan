@@ -1,0 +1,30 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+}
+
+model Order {
+  id     String @id @default(cuid())
+  userId String
+}
+
+model Invoice {
+  id      String @id @default(cuid())
+  userId  String
+  orderId String
+}
+
+model Document {
+  id      String @id @default(cuid())
+  ownerId String
+}
+
+model Note {
+  id     String @id @default(cuid())
+  userId String
+}

@@ -1,0 +1,9 @@
+{
+  "name": "authzscan-benchmark",
+  "private": true,
+  "dependencies": {
+    "next": "^15.0.0",
+    "next-auth": "^5.0.0",
+    "@prisma/client": "^6.0.0"
+  }
+}

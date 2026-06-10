@@ -48,6 +48,24 @@ importers:
         specifier: ^4.0.0
         version: 4.4.3
 
+  packages/eval:
+    dependencies:
+      '@authzscan/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@authzscan/inventory':
+        specifier: workspace:*
+        version: link:../inventory
+      '@authzscan/shared':
+        specifier: workspace:*
+        version: link:../shared
+      commander:
+        specifier: ^14.0.0
+        version: 14.0.3
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
+
   packages/inventory:
     dependencies:
       '@authzscan/shared':
