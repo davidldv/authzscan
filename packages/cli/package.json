@@ -8,8 +8,10 @@
     "build": "tsup"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.102.0",
     "commander": "^14.0.0",
-    "ts-morph": "^26.0.0"
+    "ts-morph": "^26.0.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@authzscan/engine": "workspace:*",
