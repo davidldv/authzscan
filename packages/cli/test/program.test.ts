@@ -17,7 +17,7 @@ describe("authzscan CLI", () => {
       maxEndpoints: undefined,
       budget: undefined,
       resume: false,
-      model: "claude-fable-5",
+      model: "claude-sonnet-4-6",
     });
   });
 

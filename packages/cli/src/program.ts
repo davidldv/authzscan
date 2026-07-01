@@ -27,7 +27,7 @@ export function buildProgram(onScan: (repo: string, opts: ScanOptions) => void):
     .option("--max-endpoints <n>", "limit number of endpoints analyzed", parsePositiveNumber)
     .option("--budget <usd>", "halt scan at estimated spend (USD)", parsePositiveNumber)
     .option("--resume", "resume from .authzscan/ artifacts", false)
-    .option("--model <id>", "Anthropic model id", "claude-fable-5")
+    .option("--model <id>", "Anthropic model id", "claude-sonnet-4-6")
     .action((repo: string, opts: ScanOptions) => {
       onScan(repo, {
         format: opts.format,

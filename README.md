@@ -1,6 +1,6 @@
 # authzscan
 
-**Autonomous IDOR/BOLA review for Next.js App Router repos, powered by Claude Fable 5.**
+**Autonomous IDOR/BOLA review for Next.js App Router repos, driven by Claude agents.**
 
 Most access-control bugs aren't "no login." They're authenticated users reaching *other people's* data: an endpoint fetches `orders/[id]` keyed only on the client-supplied `id`, with no `WHERE userId = session.user`. User A reads User B's order. This is [OWASP A01: Broken Access Control](https://owasp.org/Top10/A01_2021-Broken_Access_Control/) — the #1 web risk — and pattern-matching SAST tools (Semgrep, Snyk, Copilot) largely miss it, because deciding *whose* data a query returns requires reasoning about the code, not matching syntax.
 
@@ -17,8 +17,8 @@ A four-phase pipeline. Only phases 2 and 3 call the model; phase 1 is fully dete
 | Phase | What it does | Engine |
 |-------|--------------|--------|
 | **1. Inventory** | Enumerate every route handler and Server Action, detect the auth library (next-auth, Clerk, Lucia, custom), and extract the repo's own ownership idioms. | Deterministic — `ts-morph`, no LLM |
-| **2. Trace** | Per endpoint group: follow each client-controlled identifier (route param, body field, query) to the DB query it reaches, and flag queries with no ownership/tenancy scope. | Fable 5 agent |
-| **3. Verify** | Adversarial second pass: re-read the cited code, kill false positives, and confirm only when a concrete "user A reaches user B's resource" scenario holds. | Fable 5 agent |
+| **2. Trace** | Per endpoint group: follow each client-controlled identifier (route param, body field, query) to the DB query it reaches, and flag queries with no ownership/tenancy scope. | Claude agent |
+| **3. Verify** | Adversarial second pass: re-read the cited code, kill false positives, and confirm only when a concrete "user A reaches user B's resource" scenario holds. | Claude agent |
 | **4. Render** | Emit a Markdown report, [SARIF 2.1.0](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning) (GitHub code scanning), or JSON, plus a CI exit code. | Deterministic |
 
 **Degrade loudly, never silently:** endpoints that can't be analyzed are reported as *not analyzed* (never as "clean"), and candidates that can't be verified are surfaced as low-confidence `UNVERIFIED` rather than dropped.
@@ -62,7 +62,7 @@ pnpm exec tsx packages/cli/src/bin.ts scan <path-to-nextjs-repo>
 | `--max-endpoints <n>` | all | Cap endpoints analyzed (useful for a cheap first pass). |
 | `--budget <usd>` | none | Halt the scan once estimated spend reaches this ceiling. |
 | `--resume` | off | Resume from `.authzscan/` artifacts after an interrupted run. |
-| `--model <id>` | `claude-fable-5` | Anthropic model id. |
+| `--model <id>` | `claude-sonnet-4-6` | Anthropic model id — any adaptive-thinking model (Sonnet 4.6, Opus 4.x). |
 
 ### Output
 
@@ -88,7 +88,7 @@ Credibility comes from a measured benchmark, not vibes.
 
 ```bash
 pnpm eval:fake          # zero-cost harness sanity check (PerfectRunner oracle)
-pnpm eval --runs 3      # live eval against Fable 5 — costs real API spend
+pnpm eval --runs 3      # live eval on Sonnet 4.6 — costs real API spend
 ```
 
 Reports land in `eval-reports/`.

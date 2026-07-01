@@ -3,3 +3,5 @@ dist/
 coverage/
 .authzscan/
 *.tsbuildinfo
+.env
+.env.*
