@@ -19,7 +19,7 @@
 
 ## Manual prerequisites (David, not code tasks)
 
-- **Phase 1 — the number:** `pnpm eval -- --runs 3 --model claude-sonnet-4-6` (~$2–6), paste the report. Feeds Task 4.
+- **Phase 1 — the number:** `pnpm eval --runs 3 --model claude-sonnet-4-6` (~$2–6), paste the report. Feeds Task 4. (No `--` separator — pnpm 11 forwards it literally and the eval CLI rejects it.)
 - **Publish:** `pnpm publish` (or `pnpm --filter authzscan publish`) from `packages/cli` (needs npm login + 2FA). Gates the page going public.
 - **Deploy:** drop `landing/` on Vercel or a `gh-pages` branch.
 
@@ -395,7 +395,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ### Task 4: Fill the real metric (gated on David's eval run)
 
-> **PREREQUISITE:** David has run Phase 1 (`pnpm eval -- --runs 3 --model claude-sonnet-4-6`) and pasted the report. Do not invent numbers.
+> **PREREQUISITE:** David has run Phase 1 (`pnpm eval --runs 3 --model claude-sonnet-4-6`) and pasted the report. Do not invent numbers.
 
 **Files:**
 - Modify: `landing/index.html` (both `data-metric` slots), `landing/verify.mjs`

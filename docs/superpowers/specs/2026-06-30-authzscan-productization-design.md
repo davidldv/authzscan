@@ -37,8 +37,8 @@ Get the real figure:
 
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
-pnpm eval -- --runs 1 --budget 2                    # smoke, ~$2
-pnpm eval -- --runs 3 --model claude-sonnet-4-6     # full, the headline number
+pnpm eval --runs 1 --budget 2                    # smoke, ~$2
+pnpm eval --runs 3 --model claude-sonnet-4-6     # full, the headline number
 ```
 
 David runs it (spends his API budget), pastes the report; Claude reads the gates
