@@ -13,7 +13,7 @@ program
   .description("Run the authzscan benchmark eval and write a gated report")
   .argument("[benchmark]", "path to the benchmark directory", "benchmark")
   .option("--runs <n>", "number of eval runs", (v) => Number.parseInt(v, 10), 3)
-  .option("--model <model>", "model id", "claude-fable-5")
+  .option("--model <model>", "model id", "claude-sonnet-4-6")
   .option("--budget <usd>", "max spend per scan in USD", (v) => Number.parseFloat(v))
   .option("--fake", "use the PerfectRunner oracle instead of the API (no cost; harness sanity check)", false)
   .action(async (benchmark: string, opts: { runs: number; model: string; budget?: number; fake: boolean }) => {

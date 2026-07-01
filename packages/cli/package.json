@@ -1,12 +1,30 @@
 {
-  "name": "@authzscan/cli",
+  "name": "authzscan",
   "version": "0.1.0",
-  "private": true,
+  "description": "Autonomous IDOR/BOLA (broken access control) review for Next.js App Router repos, driven by Claude agents.",
+  "keywords": ["idor", "bola", "broken-access-control", "authorization", "nextjs", "security", "owasp", "sast", "appsec"],
+  "homepage": "https://github.com/davidldv/authzscan#readme",
+  "repository": { "type": "git", "url": "https://github.com/davidldv/authzscan.git", "directory": "packages/cli" },
+  "author": "David Londoño <dlondon.dev@gmail.com>",
+  "license": "MIT",
   "type": "module",
-  "bin": { "authzscan": "./src/bin.ts" },
+  "bin": { "authzscan": "dist/bin.js" },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsup",
+    "prepack": "pnpm build"
+  },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.102.0",
+    "commander": "^14.0.0",
+    "ts-morph": "^26.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
     "@authzscan/engine": "workspace:*",
     "@authzscan/shared": "workspace:*",
-    "commander": "^14.0.0"
+    "tsup": "^8.0.0"
   }
 }
