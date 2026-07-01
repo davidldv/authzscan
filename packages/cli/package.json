@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "bin": { "authzscan": "./src/bin.ts" },
+  "scripts": {
+    "build": "tsup"
+  },
   "dependencies": {
+    "commander": "^14.0.0",
+    "ts-morph": "^26.0.0"
+  },
+  "devDependencies": {
     "@authzscan/engine": "workspace:*",
     "@authzscan/shared": "workspace:*",
-    "commander": "^14.0.0"
+    "tsup": "^8.0.0"
   }
 }
