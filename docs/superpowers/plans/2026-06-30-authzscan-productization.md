@@ -15,12 +15,12 @@
 - **No fabricated facts.** The recall/precision metric on the landing page comes only from a real eval run; the `npx authzscan` line only ships because the package is really published. The mockup numbers `82%`/`91%` must never appear anywhere.
 - **Model must be adaptive-thinking.** The runner hardcodes `output_config.effort: "high"`; `--model` default stays `claude-sonnet-4-6` (Sonnet 4.6 / Opus 4.x only).
 - **Commits** end with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. Work on branch `feat/productization`.
-- **Do not run the live eval or `npm publish` — those are David's triggers.**
+- **Do not run the live eval or `pnpm publish` — those are David's triggers.**
 
 ## Manual prerequisites (David, not code tasks)
 
 - **Phase 1 — the number:** `pnpm eval -- --runs 3 --model claude-sonnet-4-6` (~$2–6), paste the report. Feeds Task 4.
-- **Publish:** `npm publish` from `packages/cli` (needs npm login + 2FA). Gates the page going public.
+- **Publish:** `pnpm publish` (or `pnpm --filter authzscan publish`) from `packages/cli` (needs npm login + 2FA). Gates the page going public.
 - **Deploy:** drop `landing/` on Vercel or a `gh-pages` branch.
 
 ---
@@ -171,7 +171,7 @@ Rename to `authzscan`, add publish metadata, LICENSE, package README, and prove 
 }
 ```
 
-Note: `private: true` is gone. `prepack` rebuilds `dist` before every `npm pack`/`npm publish`.
+Note: `private: true` is gone. `prepack` rebuilds `dist` before every `pnpm pack`/`pnpm publish`.
 
 - [ ] **Step 2: Add the MIT LICENSE (root + package)**
 
@@ -227,13 +227,13 @@ https://github.com/davidldv/authzscan
 
 - [ ] **Step 4: Inspect the tarball contents**
 
-Run: `cd packages/cli && npm pack --dry-run`
+Run: `cd packages/cli && pnpm pack --dry-run`
 Expected: the file list is exactly `dist/**`, `README.md`, `LICENSE`, `package.json` — no `src/`, no tests.
 
 - [ ] **Step 5: Smoke-test the real tarball end to end**
 
 ```bash
-cd packages/cli && npm pack                       # -> authzscan-0.1.0.tgz
+cd packages/cli && pnpm pack                      # -> authzscan-0.1.0.tgz
 mkdir -p "$TMPDIR/azs-smoke" && cd "$TMPDIR/azs-smoke"
 npm init -y >/dev/null && npm i "$OLDPWD/authzscan-0.1.0.tgz"
 npx authzscan scan ../../Dev/authzscan/benchmark --max-endpoints 1
@@ -250,7 +250,7 @@ git commit -m "feat: publishable authzscan npm package (npx-able)
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
-> **David's trigger (not a code step):** `cd packages/cli && npm publish`. Effectively permanent (72h unpublish window). After it lands, `npx authzscan ./my-app` is true and the landing hero is unblocked.
+> **David's trigger (not a code step):** `cd packages/cli && pnpm publish`. Effectively permanent (72h unpublish window). After it lands, `npx authzscan ./my-app` is true and the landing hero is unblocked.
 
 ---
 
@@ -410,7 +410,7 @@ In the hero badge and the proof `<li>`, swap `pending eval` for the measured val
 
 - [ ] **Step 3: Tighten the guard so a placeholder can never ship again**
 
-In `landing/verify.mjs`, add `"pending eval"` to the `banned` array. Keep `"82%"`/`"91%"` banned only if they don't collide with a real result; if a genuine measured value is 82%/91%, drop that entry from `banned` (the number is now true).
+In `landing/verify.mjs`, remove the `slots !== 2` "pending eval" count check (the placeholders are gone now) and add `"pending eval"` to the `banned` array so a stray placeholder can never ship again. Keep `"82%"`/`"91%"` banned only if they don't collide with a real result; if a genuine measured value is 82%/91%, drop that entry from `banned` (the number is now true).
 
 - [ ] **Step 4: Run the guard**
 

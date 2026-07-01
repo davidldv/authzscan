@@ -89,7 +89,7 @@ third-party deps stay as `dependencies` npm installs on demand. `authzscan` is f
 
 ```bash
 pnpm --filter authzscan build           # produces dist/bin.js
-cd packages/cli && npm pack             # authzscan-0.1.0.tgz
+cd packages/cli && pnpm pack            # authzscan-0.1.0.tgz
 # in a temp dir:
 npm i ./authzscan-0.1.0.tgz
 npx authzscan scan <path-to-benchmark> --max-endpoints 1
@@ -102,7 +102,7 @@ means the bundle is wrong. `authzscan --help` is the free structural warm-up.
 
 ### Publish (David's trigger)
 
-`npm publish` from `packages/cli` — needs David's npm login + 2FA, and is effectively
+`pnpm publish` (or `pnpm --filter authzscan publish`) from `packages/cli` — needs David's npm login + 2FA, and is effectively
 permanent (npm's unpublish window is 72h). Claude does not push to David's account.
 
 ## Phase 3 — landing page (Claude builds; David deploys)
@@ -133,7 +133,7 @@ No fabricated metrics anywhere. Until Phase 1 lands, the metric renders as an ob
 |---|-------|-----|-------|
 | 1 | Run the eval | **David** (API $) | the metric badge |
 | 2 | Package + tsup + smoke test | Claude | — |
-| 2b | `npm publish` | **David** (npm 2FA) | the `npx` hero line |
+| 2b | `pnpm publish` | **David** (npm 2FA) | the `npx` hero line |
 | 3 | Build landing page | Claude | — |
 | 3b | Deploy page | **David** | — |
 
