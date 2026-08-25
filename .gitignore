@@ -6,3 +6,6 @@ coverage/
 .env
 .env.*
 *.tgz
+
+# impeccable working files (decision logs, review captures)
+.impeccable/
