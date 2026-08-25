@@ -1,15 +1,43 @@
 # authzscan
 
-**Autonomous IDOR/BOLA review for Next.js App Router repos, driven by Claude agents.**
+Object-level authorization review for Next.js App Router repos, driven by Claude agents.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 npx authzscan scan ./my-next-app
 ```
 
-Finds authenticated users reaching *other people's* data (OWASP A01 broken access
-control) — the class pattern-matching SAST misses. Emits Markdown / SARIF / JSON plus a
-CI exit code (`0` clean · `1` findings · `2` error).
+Most access-control bugs aren't "no login." They're a logged-in user reaching *other people's* data: an endpoint fetches `orders/[id]` keyed only on the client-supplied `id`, with no `WHERE userId = session.user`. Pattern-matching SAST largely misses this class, because the broken query is a near-copy of the correct one and deciding *whose* row it returns means reasoning about the code rather than matching syntax against it.
 
-Full docs, the four-phase pipeline, and the benchmark eval:
-https://github.com/davidldv/authzscan
+Four passes. Only two of them ask a model anything:
+
+1. **Inventory** walks the AST for every route handler and Server Action and detects the auth library. Deterministic, `ts-morph`.
+2. **Trace** follows each client-controlled identifier to the database call it reaches.
+3. **Verify** re-reads the cited code adversarially and throws the finding out unless a concrete "user A reaches user B's resource" path survives.
+4. **Render** emits Markdown, SARIF 2.1.0, or JSON, plus an exit code: `0` nothing confirmed, `1` confirmed findings, `2` the scan itself broke.
+
+Endpoints that can't be analyzed are reported as *not analyzed*, never as "clean."
+
+## Measured
+
+On a benchmark of 16 planted IDOR/BOLA bugs next to 6 hardened twins (near-identical endpoints that are correctly scoped, there to catch a tool that cries wolf), running `claude-sonnet-4-6`:
+
+100% recall (16/16, easy 6/6, medium 6/6, hard 4/4) and 100% precision (17 confirmed, 0 false positives, 0 twins flagged), at $2.10 and about 19 minutes per scan.
+
+That's one run, not a mean, so there's no error bar on it yet, and a benchmark somebody wrote on purpose is easier than a codebase that grew by accident. Findings are leads for human review. Finding nothing is not the same as being safe.
+
+## Options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--format <md\|sarif\|json>` | `md` | Output format written to stdout. |
+| `--max-endpoints <n>` | all | Cap endpoints analyzed, for a cheap first pass. |
+| `--budget <usd>` | none | Halt once estimated spend reaches this ceiling. |
+| `--resume` | off | Resume from `.authzscan/` artifacts after an interrupted run. |
+| `--model <id>` | `claude-sonnet-4-6` | Any adaptive-thinking Anthropic model. |
+
+Requires Node 20 or newer and an `ANTHROPIC_API_KEY`. A scan costs real API spend; use `--budget` to cap it.
+
+Full docs, the pipeline in detail, and the eval harness: https://github.com/davidldv/authzscan
+
+MIT.
