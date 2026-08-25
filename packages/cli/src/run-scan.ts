@@ -1,6 +1,6 @@
 import { executeScan, AnthropicRunner, type ScanResult } from "@authzscan/engine";
 import type { TFinding } from "@authzscan/shared";
-import { EXIT, exitCodeForFindings, type ExitCode } from "./exit-code.js";
+import { EXIT, exitCodeForScan, type ExitCode } from "./exit-code.js";
 import type { ScanOptions } from "./program.js";
 
 export interface ScanSummaryInput {
@@ -30,7 +30,7 @@ export function buildScanSummary(input: ScanSummaryInput): ScanSummary {
   );
   lines.push(`Estimated spend: $${input.spentUsd.toFixed(2)}`);
   lines.push("Report: .authzscan/report.md  SARIF: .authzscan/results.sarif");
-  return { text: lines.join("\n"), exitCode: exitCodeForFindings(input.findings) };
+  return { text: lines.join("\n"), exitCode: exitCodeForScan(input.findings, input.coverage) };
 }
 
 export async function runScanCommand(repo: string, opts: ScanOptions): Promise<never> {

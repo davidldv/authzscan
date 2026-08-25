@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { exitCodeForFindings, EXIT } from "../src/exit-code.js";
+import { exitCodeForScan, EXIT } from "../src/exit-code.js";
 import type { TFinding } from "@authzscan/shared";
 
 const base: TFinding = {
@@ -20,14 +20,22 @@ describe("exit codes", () => {
   });
 
   it("returns CLEAN for empty findings", () => {
-    expect(exitCodeForFindings([])).toBe(EXIT.CLEAN);
+    expect(exitCodeForScan([], { analyzed: 3, total: 3, unscanned: [] })).toBe(EXIT.CLEAN);
   });
 
   it("returns CLEAN when all findings rejected", () => {
-    expect(exitCodeForFindings([{ ...base, verdict: "rejected" }])).toBe(EXIT.CLEAN);
+    expect(exitCodeForScan([{ ...base, verdict: "rejected" }], { analyzed: 3, total: 3, unscanned: [] })).toBe(EXIT.CLEAN);
   });
 
   it("returns FINDINGS when any finding confirmed", () => {
-    expect(exitCodeForFindings([{ ...base, verdict: "rejected" }, base])).toBe(EXIT.FINDINGS);
+    expect(exitCodeForScan([{ ...base, verdict: "rejected" }, base], { analyzed: 3, total: 3, unscanned: [] })).toBe(EXIT.FINDINGS);
+  });
+
+  it("returns ERROR when nothing was confirmed but endpoints went unanalyzed", () => {
+    expect(exitCodeForScan([], { analyzed: 5, total: 23, unscanned: ["ep1", "ep2"] })).toBe(EXIT.ERROR);
+  });
+
+  it("still reports FINDINGS on a partial scan that confirmed something", () => {
+    expect(exitCodeForScan([base], { analyzed: 5, total: 23, unscanned: ["ep1"] })).toBe(EXIT.FINDINGS);
   });
 });
