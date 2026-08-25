@@ -10,7 +10,7 @@ function paramName(segment: string): string | null {
 
 export function routePathFromFile(file: string): RoutePathInfo | null {
   const norm = file.replace(/\\/g, "/");
-  const m = norm.match(/^app\/(?:(.*)\/)?route\.(ts|tsx|js|jsx)$/);
+  const m = norm.match(/^(?:src\/)?app\/(?:(.*)\/)?route\.(ts|tsx|js|jsx)$/);
   if (!m) return null;
 
   const dir = m[1] ?? "";

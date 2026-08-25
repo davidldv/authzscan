@@ -47,9 +47,14 @@ export async function runTracePhase(input: TracePhaseInput): Promise<TracePhaseR
   const unscannedEndpointIds: string[] = [];
   let budgetExceeded = false;
 
+  // Missing credentials, a dead network, a hard rate limit: whatever the cause, once
+  // several groups in a row have failed the rest will fail too. Stop paying for retries.
+  const MAX_CONSECUTIVE_FAILURES = 3;
+  let consecutiveFailures = 0;
+
   for (const group of groups) {
-    if (input.guard.exceeded()) {
-      budgetExceeded = true;
+    if (input.guard.exceeded() || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+      budgetExceeded = input.guard.exceeded();
       unscannedEndpointIds.push(...group.endpoints.map((e) => e.id));
       continue;
     }
@@ -57,10 +62,15 @@ export async function runTracePhase(input: TracePhaseInput): Promise<TracePhaseR
     try {
       const found = await withRetry(() => runOnce(input, prompt), input.retry);
       candidates.push(...found);
+      consecutiveFailures = 0;
       input.log?.(`traced ${group.key}: ${found.length} candidate(s)`);
     } catch (err) {
       unscannedEndpointIds.push(...group.endpoints.map((e) => e.id));
+      consecutiveFailures += 1;
       input.log?.(`trace FAILED for ${group.key}: ${err instanceof Error ? err.message : String(err)}`);
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        input.log?.(`aborting trace: ${MAX_CONSECUTIVE_FAILURES} groups failed in a row — remaining groups reported as NOT analyzed`);
+      }
     }
   }
 

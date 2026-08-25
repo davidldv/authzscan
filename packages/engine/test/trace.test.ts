@@ -106,4 +106,29 @@ describe("runTracePhase", () => {
     expect(result.unscannedEndpointIds).toEqual(["b1", "c1"]);
     expect(result.budgetExceeded).toBe(true);
   });
+
+  it("stops calling the model once several groups fail in a row", async () => {
+    let calls = 0;
+    const runner: AgentRunner = {
+      run: async () => {
+        calls += 1;
+        throw new Error("Could not resolve authentication method");
+      },
+    };
+    const keys = ["/api/a", "/api/b", "/api/c", "/api/d", "/api/e", "/api/f"];
+    const result = await runTracePhase({
+      endpoints: keys.map((k, i) => ep(`e${i}`, k)),
+      authProfile: profile,
+      repoRoot: "/tmp",
+      runner,
+      guard: new BudgetGuard(undefined, "claude-sonnet-4-6"),
+      retry: { retries: 0, delayMs: 0 },
+    });
+
+    // Three failing groups trip the breaker; the remaining three are never attempted.
+    expect(calls).toBe(3);
+    // Every endpoint is still accounted for as unanalyzed, none silently dropped.
+    expect(result.unscannedEndpointIds).toHaveLength(keys.length);
+    expect(result.budgetExceeded).toBe(false);
+  });
 });

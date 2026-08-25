@@ -27,6 +27,13 @@ describe("routePathFromFile", () => {
     });
   });
 
+  it("maps the src/app layout the same as app", () => {
+    expect(routePathFromFile("src/app/api/orders/[id]/route.ts")).toEqual({
+      routePath: "/api/orders/[id]",
+      params: ["id"],
+    });
+  });
+
   it("strips route groups and parallel slots", () => {
     expect(routePathFromFile("app/(shop)/api/cart/route.ts")).toEqual({
       routePath: "/api/cart",

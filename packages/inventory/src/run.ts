@@ -20,9 +20,10 @@ function readPackageJson(repoPath: string): PackageJsonDeps {
 }
 
 export function runInventory(repoPath: string): TInventoryResult {
-  const appDir = path.join(repoPath, "app");
-  if (!existsSync(appDir)) {
-    throw new Error(`no app/ directory found in ${repoPath} — is this a Next.js App Router repo?`);
+  // Next.js allows both layouts; a repo using src/app is not a different kind of repo.
+  const appDir = [path.join(repoPath, "app"), path.join(repoPath, "src", "app")].find(existsSync);
+  if (appDir === undefined) {
+    throw new Error(`no app/ or src/app/ directory found in ${repoPath} — is this a Next.js App Router repo?`);
   }
 
   const project = new Project({
