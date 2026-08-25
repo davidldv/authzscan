@@ -96,4 +96,40 @@ describe("executeScan", () => {
     const sarif = JSON.parse(readFileSync(path.join(repo, ".authzscan", "results.sarif"), "utf8"));
     expect(sarif.version).toBe("2.1.0");
   });
+
+  it("does not treat a budget-starved verify pass as a finished one", async () => {
+    // Budget runs out during trace, so no candidate gets an adversarial pass.
+    const starved = await executeScan({
+      repoPath: repo,
+      runner: fakeRunner(),
+      model: "claude-fable-5",
+      retry: { retries: 0, delayMs: 0 },
+      budgetUsd: 0.0000001,
+    });
+    expect(starved.findings.some((f) => f.reproduction.startsWith("UNVERIFIED"))).toBe(true);
+
+    const findingsArtifact = JSON.parse(
+      readFileSync(path.join(repo, ".authzscan", "findings.json"), "utf8"),
+    ) as { complete: boolean };
+    expect(findingsArtifact.complete).toBe(false);
+
+    // Resuming must re-run the phase that gave up, not adopt its output.
+    let verifyCalls = 0;
+    const counting: AgentRunner = {
+      run: async (req) => {
+        if (req.prompt.includes("adversarially verifying")) verifyCalls += 1;
+        return fakeRunner().run(req);
+      },
+    };
+    const resumed = await executeScan({
+      repoPath: repo,
+      runner: counting,
+      model: "claude-fable-5",
+      retry: { retries: 0, delayMs: 0 },
+      resume: true,
+    });
+
+    expect(verifyCalls).toBeGreaterThan(0);
+    expect(resumed.findings.every((f) => !f.reproduction.startsWith("UNVERIFIED"))).toBe(true);
+  });
 });

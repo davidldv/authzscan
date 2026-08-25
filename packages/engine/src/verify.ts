@@ -25,6 +25,8 @@ export interface VerifyPhaseInput {
 export interface VerifyPhaseResult {
   findings: TFinding[];
   budgetExceeded: boolean;
+  /** Candidates reported without an adversarial pass, for whatever reason. */
+  unverifiedCandidateIds: string[];
 }
 
 // Degrade loudly: a candidate we could not verify is reported, not dropped —
@@ -41,11 +43,13 @@ function unverified(candidate: TCandidateFinding, reason: string): TFinding {
 
 export async function runVerifyPhase(input: VerifyPhaseInput): Promise<VerifyPhaseResult> {
   const findings: TFinding[] = [];
+  const unverifiedCandidateIds: string[] = [];
   let budgetExceeded = false;
 
   for (const candidate of input.candidates) {
     if (input.guard.exceeded()) {
       budgetExceeded = true;
+      unverifiedCandidateIds.push(candidate.id);
       findings.push(unverified(candidate, "scan budget exhausted before this candidate was verified"));
       continue;
     }
@@ -59,10 +63,11 @@ export async function runVerifyPhase(input: VerifyPhaseInput): Promise<VerifyPha
       findings.push({ ...candidate, ...verdict });
       input.log?.(`verified ${candidate.id}: ${verdict.verdict} (${verdict.confidence})`);
     } catch (err) {
+      unverifiedCandidateIds.push(candidate.id);
       findings.push(unverified(candidate, err instanceof Error ? err.message : String(err)));
       input.log?.(`verify FAILED for ${candidate.id}`);
     }
   }
 
-  return { findings, budgetExceeded };
+  return { findings, budgetExceeded, unverifiedCandidateIds };
 }
