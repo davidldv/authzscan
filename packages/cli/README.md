@@ -24,7 +24,9 @@ On a benchmark of 16 planted IDOR/BOLA bugs next to 6 hardened twins (near-ident
 
 100% recall (16/16, easy 6/6, medium 6/6, hard 4/4) and 100% precision (17 confirmed, 0 false positives, 0 twins flagged), at $2.10 and about 19 minutes per scan.
 
-That's one run, not a mean, so there's no error bar on it yet, and a benchmark somebody wrote on purpose is easier than a codebase that grew by accident. Findings are leads for human review. Finding nothing is not the same as being safe.
+That's one run, not a mean, so there's no error bar on it yet.
+
+The benchmark is a 24-file app, and that number does not carry to a real codebase. A scan of [rallly](https://github.com/lukevella/rallly) produced 11 candidates, of which hand review kept one genuine finding and one harmless missing consistency check. Findings are leads for human review. Finding nothing is not the same as being safe.
 
 ## Options
 
@@ -32,11 +34,11 @@ That's one run, not a mean, so there's no error bar on it yet, and a benchmark s
 |---|---|---|
 | `--format <md\|sarif\|json>` | `md` | Output format written to stdout. |
 | `--max-endpoints <n>` | all | Cap endpoints analyzed, for a cheap first pass. |
-| `--budget <usd>` | none | Halt once estimated spend reaches this ceiling. |
+| `--budget <usd>` | none | Stop before the next endpoint group once estimated spend reaches this. Checked between groups, so it can overshoot by one group. |
 | `--resume` | off | Resume from `.authzscan/` artifacts after an interrupted run. |
 | `--model <id>` | `claude-sonnet-4-6` | Any adaptive-thinking Anthropic model. |
 
-Requires Node 20 or newer and an `ANTHROPIC_API_KEY`. A scan costs real API spend; use `--budget` to cap it.
+Requires Node 20 or newer and an `ANTHROPIC_API_KEY`. A scan costs real API spend, and cost tracks endpoint groups multiplied by repository size rather than endpoint count. `--budget` stops the run between groups, so treat it as a stop signal rather than a hard ceiling: the measured overshoot on a 650-file repo was $0.81.
 
 Full docs, the pipeline in detail, and the eval harness: https://github.com/davidldv/authzscan
 
