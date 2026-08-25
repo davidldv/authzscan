@@ -4,7 +4,8 @@ import path from "node:path";
 import { runInventory } from "../src/index.js";
 import { InventoryResult } from "@authzscan/shared";
 
-const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic-app");
+const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+const fixture = path.join(fixtures, "basic-app");
 
 describe("runInventory", () => {
   it("produces a schema-valid InventoryResult", () => {
@@ -66,6 +67,16 @@ describe("runInventory", () => {
   });
 
   it("throws a clear error when app/ is missing", () => {
-    expect(() => runInventory(path.dirname(fixture))).toThrow(/no app\/ directory/i);
+    expect(() => runInventory(path.dirname(fixture))).toThrow(/no app\/ or src\/app\/ directory/i);
+  });
+});
+
+describe("runInventory on a src/app repo", () => {
+  it("finds route handlers under src/app", () => {
+    const result = runInventory(path.join(fixtures, "src-app"));
+    const orderGet = result.endpoints.find((e) => e.method === "GET");
+    expect(orderGet?.file).toBe("src/app/api/orders/[id]/route.ts");
+    expect(orderGet?.routePath).toBe("/api/orders/[id]");
+    expect(orderGet?.params).toEqual(["id"]);
   });
 });
