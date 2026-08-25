@@ -26,12 +26,26 @@ export function runInventory(repoPath: string): TInventoryResult {
     throw new Error(`no app/ or src/app/ directory found in ${repoPath} — is this a Next.js App Router repo?`);
   }
 
+  // Endpoints only ever live under the app dir, but a repo's ownership idioms
+  // usually do not: features/, lib/ and server/ are where the authorization
+  // helpers live. Scanning only app/ reports "no ownership idioms" for a repo
+  // that has a strict convention, and the trace agent then judges every query
+  // against nothing.
+  const srcRoot = path.dirname(appDir);
   const project = new Project({
     compilerOptions: { allowJs: true },
     skipAddingFilesFromTsConfig: true,
   });
-  const glob = `${appDir.replace(/\\/g, "/")}/**/*.{ts,tsx,js,jsx}`;
-  project.addSourceFilesAtPaths(glob);
+  project.addSourceFilesAtPaths([
+    `${srcRoot.replace(/\\/g, "/")}/**/*.{ts,tsx,js,jsx}`,
+    "!**/node_modules/**",
+    "!**/.next/**",
+    "!**/dist/**",
+    "!**/build/**",
+    "!**/*.d.ts",
+  ]);
+
+  const appPrefix = `${path.relative(repoPath, appDir).replace(/\\/g, "/")}/`;
 
   const endpoints: TEndpoint[] = [];
   const skippedFiles: Array<{ file: string; reason: string }> = [];
@@ -43,6 +57,8 @@ export function runInventory(repoPath: string): TInventoryResult {
     try {
       for (const p of findAuthIndicators(sf)) sessionPatterns.add(p);
       for (const idiom of findOwnershipIdioms(sf)) ownershipIdioms.add(idiom);
+
+      if (!relFile.startsWith(appPrefix)) continue;
 
       const fileUsesDb = usesDb(sf);
       const fileAuth = findAuthIndicators(sf);
