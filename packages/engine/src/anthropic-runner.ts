@@ -5,6 +5,31 @@ import type { AgentRunner, AgentRunRequest, AgentRunResult } from "./runner.js";
 import { emptyUsage, addUsage, type TokenUsage } from "./usage.js";
 import { readRepoFile, grepRepo, listRepoFiles } from "./repo-fs.js";
 
+// A full listing is re-sent on every turn of the conversation it appears in, and
+// each endpoint group is its own conversation with no cache between them. On a
+// 1500-file repo that is ~17k tokens per turn, which cost more than the analysis.
+// Past the cap, directory shape plus grep is more useful than an alphabetical
+// prefix of the file list anyway.
+const MAX_LISTED_FILES = 300;
+
+export function summarizeRepoFiles(repoRoot: string): string {
+  const files = listRepoFiles(repoRoot);
+  if (files.length <= MAX_LISTED_FILES) return files.join("\n");
+
+  const countByDir = new Map<string, number>();
+  for (const f of files) {
+    const slash = f.lastIndexOf("/");
+    const dir = slash === -1 ? "." : f.slice(0, slash);
+    countByDir.set(dir, (countByDir.get(dir) ?? 0) + 1);
+  }
+  const dirs = [...countByDir.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dir, n]) => `${dir}/ (${n})`)
+    .join("\n");
+
+  return `${files.length} source files, too many to list. Directories and file counts:\n\n${dirs}\n\nUse grep to locate specific files.`;
+}
+
 function buildRepoTools(repoRoot: string) {
   return [
     betaZodTool({
@@ -28,9 +53,9 @@ function buildRepoTools(repoRoot: string) {
     betaZodTool({
       name: "list_files",
       description:
-        "List all source file paths in the repository. Call this when you need to discover related files (middleware, lib/auth, prisma schema) before reading them.",
+        "List source file paths in the repository. Call this when you need to discover related files (middleware, lib/auth, prisma schema) before reading them. In a large repository this returns directories and file counts instead of every path; use grep to find specific files.",
       inputSchema: z.object({}),
-      run: () => listRepoFiles(repoRoot).join("\n"),
+      run: () => summarizeRepoFiles(repoRoot),
     }),
   ];
 }

@@ -60,7 +60,7 @@ pnpm exec tsx packages/cli/src/bin.ts scan <path-to-nextjs-repo>
 |------|---------|-------------|
 | `--format <md\|sarif\|json>` | `md` | Output format written to stdout. |
 | `--max-endpoints <n>` | all | Cap endpoints analyzed (useful for a cheap first pass). |
-| `--budget <usd>` | none | Halt the scan once estimated spend reaches this ceiling. |
+| `--budget <usd>` | none | Stop before the next endpoint group once estimated spend reaches this. Checked between groups, not inside one, so it can overshoot by a single group's cost. Measured overshoot on a 650-file repo: $0.81. |
 | `--resume` | off | Resume from `.authzscan/` artifacts after an interrupted run. |
 | `--model <id>` | `claude-sonnet-4-6` | Anthropic model id. Any adaptive-thinking model works (Sonnet 4.6, Opus 4.x). |
 
@@ -127,7 +127,9 @@ pnpm typecheck   # tsc --noEmit across all packages
 
 ## Scope and limits
 
-In scope: object-level authorization (IDOR/BOLA) in Next.js App Router route handlers and Server Actions. Deliberately out of scope: XSS, SQLi, SSRF, authentication flaws, function-level authorization, the Pages Router. One class of bug done properly beats ten done badly.
+In scope: object-level authorization (IDOR/BOLA) in Next.js App Router route handlers and Server Actions, in both the `app/` and `src/app/` layouts. Deliberately out of scope: XSS, SQLi, SSRF, authentication flaws, function-level authorization, the Pages Router. One class of bug done properly beats ten done badly.
+
+The benchmark number above is measured on a 24-file app. On a real repository the picture is different: a scan of [rallly](https://github.com/lukevella/rallly) produced 11 candidates, of which one was a genuine finding and one a harmless missing consistency check. Cost tracks endpoint groups multiplied by repository size, not endpoint count, so price a scan with `pnpm exec tsx scripts/size.ts <repo>` before running one.
 
 Findings are leads for human review. A confirmed finding is a strong signal. Finding nothing is not the same as being safe.
 
