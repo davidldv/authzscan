@@ -415,7 +415,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       $2.10 and about 19 minutes per scan, on claude-sonnet-4-6
     </p>
 
-    <p class="caveat">What the number doesn't cover: it's one run, not a mean across many, so there's no error bar on it yet. It was measured on Sonnet 4.6 and would move on another model. Two of the 17 confirmed findings landed on the same planted bug, because a route handler and its Server Action live in one file, so the run confirmed 16 distinct bugs rather than 17. And a benchmark somebody wrote on purpose is easier than a codebase that grew by accident.</p>
+    <p class="caveat">What the number doesn't cover: it's one run, not a mean across many, so there's no error bar on it yet. It was measured on Sonnet 4.6 and would move on another model. Two of the 17 confirmed findings landed on the same planted bug, because a route handler and its Server Action live in one file, so the run confirmed 16 distinct bugs rather than 17. And a benchmark somebody wrote on purpose is easier than a codebase that grew by accident. I pointed it at a real one and wrote down <a href="https://www.davidlondon.dev/writeups/authzscan-first-real-repository/">what the perfect score failed to predict</a>.</p>
     <p class="caveat" style="border:0;padding-top:0;margin-top:14px">The harness gets checked separately. An oracle that reads the answer key straight out of the manifest has to score a perfect 1.0 / 1.0, which proves the scoring is right no matter how the model performs.</p>
   </div>
 </section>
