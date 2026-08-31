@@ -11,14 +11,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+      # The workspace toolchain needs Node 22: pnpm 11 requires >= 22.13.
+      # The published bundle only claims Node 20, which the job below checks.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
-      # The published bin must actually build, and the landing page must not
-      # carry a claim the release cannot back.
       - run: pnpm --filter authzscan build
+      # The landing page must not carry a claim the release cannot back.
       - run: node landing/verify.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-bundle
+          path: packages/cli/dist/bin.js
+          retention-days: 1
+
+  # package.json says engines.node >= 20, so prove the bundle runs there.
+  node20:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-bundle
+          path: dist
+      - run: node dist/bin.js --version
+      # --since HEAD on a clean checkout selects no endpoints, so this exercises
+      # inventory, render and the exit-code contract without calling the API.
+      - run: node dist/bin.js scan ./benchmark --since HEAD
+        env:
+          ANTHROPIC_API_KEY: unused-no-endpoints-in-scope
