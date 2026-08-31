@@ -23,13 +23,18 @@ jobs:
       - run: pnpm --filter authzscan build
       # The landing page must not carry a claim the release cannot back.
       - run: node landing/verify.mjs
+      # Pack the real tarball, so the job below installs what npm would serve.
+      - run: npm pack --pack-destination=${{ runner.temp }}
+        working-directory: packages/cli
       - uses: actions/upload-artifact@v4
         with:
-          name: cli-bundle
-          path: packages/cli/dist/bin.js
+          name: cli-tarball
+          path: ${{ runner.temp }}/authzscan-*.tgz
           retention-days: 1
 
-  # package.json says engines.node >= 20, so prove the bundle runs there.
+  # package.json says engines.node >= 20, so install the tarball on Node 20 and
+  # run it. dist/bin.js leaves third-party deps external, so only a real install
+  # proves the published package resolves.
   node20:
     needs: test
     runs-on: ubuntu-latest
@@ -40,11 +45,12 @@ jobs:
           node-version: 20
       - uses: actions/download-artifact@v4
         with:
-          name: cli-bundle
-          path: dist
-      - run: node dist/bin.js --version
+          name: cli-tarball
+          path: ${{ runner.temp }}
+      - run: npm install --global ${{ runner.temp }}/authzscan-*.tgz
+      - run: authzscan --version
       # --since HEAD on a clean checkout selects no endpoints, so this exercises
       # inventory, render and the exit-code contract without calling the API.
-      - run: node dist/bin.js scan ./benchmark --since HEAD
+      - run: authzscan scan ./benchmark --since HEAD
         env:
           ANTHROPIC_API_KEY: unused-no-endpoints-in-scope
