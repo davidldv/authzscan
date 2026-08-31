@@ -16,6 +16,7 @@ import { runInventory } from "@authzscan/inventory";
 import { VERSION } from "@authzscan/shared";
 import { ArtifactStore } from "./artifacts.js";
 import { BudgetGuard, type TokenUsage } from "./usage.js";
+import { changedFiles } from "./changed.js";
 import { runTracePhase } from "./trace.js";
 import { runVerifyPhase } from "./verify.js";
 import type { AgentRunner, RetryOptions } from "./runner.js";
@@ -41,6 +42,8 @@ export interface ScanOptions {
   retry: RetryOptions;
   budgetUsd?: number;
   maxEndpoints?: number;
+  /** git ref; scan only endpoints in files that differ from it. */
+  sinceRef?: string;
   resume?: boolean;
   log?: (message: string) => void;
 }
@@ -65,8 +68,13 @@ export async function executeScan(opts: ScanOptions): Promise<ScanResult> {
     store.write("inventory", inventory);
   }
   let endpoints = inventory.endpoints;
-  if (opts.maxEndpoints !== undefined) endpoints = endpoints.slice(0, opts.maxEndpoints);
   opts.log?.(`inventory: ${endpoints.length} endpoint(s), auth library ${inventory.authProfile.library}`);
+  if (opts.sinceRef !== undefined) {
+    const touched = changedFiles(opts.repoPath, opts.sinceRef);
+    endpoints = endpoints.filter((e) => touched.has(e.file));
+    opts.log?.(`--since ${opts.sinceRef}: ${endpoints.length} endpoint(s) in changed files`);
+  }
+  if (opts.maxEndpoints !== undefined) endpoints = endpoints.slice(0, opts.maxEndpoints);
 
   // Phase 2: trace. A partial run resumes on the endpoints it never reached
   // instead of re-paying for the groups it already traced.

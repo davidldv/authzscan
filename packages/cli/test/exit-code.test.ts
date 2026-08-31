@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { exitCodeForScan, EXIT } from "../src/exit-code.js";
+import { exitCodeForScan, blockingFindings, EXIT } from "../src/exit-code.js";
 import type { TFinding } from "@authzscan/shared";
 
 const base: TFinding = {
@@ -37,5 +37,19 @@ describe("exit codes", () => {
 
   it("still reports FINDINGS on a partial scan that confirmed something", () => {
     expect(exitCodeForScan([base], { analyzed: 5, total: 23, unscanned: ["ep1"] })).toBe(EXIT.FINDINGS);
+  });
+
+  it("does not fail the build on findings below --fail-on", () => {
+    const low = { ...base, confidence: "low" as const };
+    expect(exitCodeForScan([low], { analyzed: 3, total: 3, unscanned: [] }, "high")).toBe(EXIT.CLEAN);
+  });
+
+  it("fails on a finding at exactly the --fail-on level", () => {
+    const medium = { ...base, confidence: "medium" as const };
+    expect(exitCodeForScan([medium], { analyzed: 3, total: 3, unscanned: [] }, "medium")).toBe(EXIT.FINDINGS);
+  });
+
+  it("blockingFindings drops rejected verdicts regardless of confidence", () => {
+    expect(blockingFindings([{ ...base, verdict: "rejected" }], "low")).toEqual([]);
   });
 });

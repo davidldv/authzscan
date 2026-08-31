@@ -38,6 +38,11 @@ describe("readRepoFile", () => {
   it("errors clearly on missing files", () => {
     expect(() => readRepoFile(repo, "nope.ts")).toThrow(/not found/i);
   });
+
+  it("refuses a non-source file so secrets cannot reach a prompt", () => {
+    writeFileSync(path.join(repo, ".env"), "SECRET=do-not-send-me", "utf8");
+    expect(() => readRepoFile(repo, ".env")).toThrow(/not a source file/);
+  });
 });
 
 describe("grepRepo", () => {

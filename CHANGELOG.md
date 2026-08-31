@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.2.0
+
+Everything a team needs to run this on a real repository on every pull request:
+scope the scan to the diff, park findings that have already been triaged, and
+choose which confidence level breaks the build.
+
+### Added
+
+- `--since <ref>` analyzes only endpoints in files that differ from a git ref.
+  A pull request that touches no route handler or Server Action now costs
+  nothing. The summary states the scope out loud, because endpoints outside the
+  diff were not reviewed and the exit code must not be read as if they were. An
+  unresolvable ref fails the run rather than silently narrowing the scan to
+  nothing, which is the shape a shallow CI clone takes.
+- `--baseline <file>` suppresses findings on endpoints recorded in it, and
+  `--update-baseline` writes that file from the current run. Entries key on the
+  endpoint id, derived from file path and export name, so a baseline keeps
+  matching across runs even though the model's wording and line numbers move.
+  Renaming the file drops the entry, which is correct: the code changed.
+- `--fail-on <high|medium|low>` sets the lowest confidence that exits `1`.
+  Findings below it are still reported. Model output varies between runs, so a
+  team can hold the build to high-confidence findings without losing the rest.
+- A GitHub Actions workflow for this repository: typecheck, tests, a CLI build,
+  and the landing-page claim check on every pull request.
+
+### Fixed
+
+- The agent's `read_file` tool accepted any path inside the scanned repository,
+  including files the `list_files` allowlist never advertised. A prompt bound for
+  a third-party API could therefore have carried a `.env` or a key file. Reads
+  are now restricted to the same source extensions `list_files` returns.
+
+### Changed
+
+- The README leads with `npx authzscan` rather than a source checkout, documents
+  the exit-code contract as a table, and states what source code leaves the
+  machine and where it goes.
+- `packageManager` is pinned so CI and local installs resolve the same pnpm.
+
 ## 0.1.1
 
 First release after running the scanner against real open-source repositories

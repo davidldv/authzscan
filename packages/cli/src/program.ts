@@ -5,6 +5,10 @@ export interface ScanOptions {
   format: "md" | "sarif" | "json";
   maxEndpoints: number | undefined;
   budget: number | undefined;
+  since: string | undefined;
+  baseline: string | undefined;
+  updateBaseline: boolean;
+  failOn: "high" | "medium" | "low";
   resume: boolean;
   model: string;
 }
@@ -27,6 +31,10 @@ export function buildProgram(onScan: (repo: string, opts: ScanOptions) => void):
     .addOption(new Option("--format <fmt>", "output format").choices(["md", "sarif", "json"]).default("md"))
     .option("--max-endpoints <n>", "limit number of endpoints analyzed", parsePositiveNumber)
     .option("--budget <usd>", "stop before the next endpoint group once estimated spend reaches this (USD); can overshoot by one group", parsePositiveNumber)
+    .option("--since <ref>", "only analyze endpoints in files that differ from this git ref")
+    .option("--baseline <file>", "suppress findings on endpoints recorded in this file")
+    .option("--update-baseline", "rewrite --baseline from this run's confirmed findings", false)
+    .addOption(new Option("--fail-on <confidence>", "lowest confidence that exits 1").choices(["high", "medium", "low"]).default("low"))
     .option("--resume", "resume from .authzscan/ artifacts", false)
     .option("--model <id>", "Anthropic model id", "claude-sonnet-4-6")
     .action((repo: string, opts: ScanOptions) => {
@@ -34,6 +42,10 @@ export function buildProgram(onScan: (repo: string, opts: ScanOptions) => void):
         format: opts.format,
         maxEndpoints: opts.maxEndpoints,
         budget: opts.budget,
+        since: opts.since,
+        baseline: opts.baseline,
+        updateBaseline: opts.updateBaseline,
+        failOn: opts.failOn,
         resume: opts.resume,
         model: opts.model,
       });

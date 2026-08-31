@@ -1,6 +1,6 @@
 {
   "name": "authzscan",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Autonomous IDOR/BOLA (broken access control) review for Next.js App Router repos, driven by Claude agents.",
   "keywords": ["idor", "bola", "broken-access-control", "authorization", "nextjs", "security", "owasp", "sast", "appsec"],
   "homepage": "https://github.com/davidldv/authzscan#readme",

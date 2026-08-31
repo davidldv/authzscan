@@ -15,6 +15,12 @@ export function resolveInRepo(repoRoot: string, rel: string): string {
 
 export function readRepoFile(repoRoot: string, rel: string): string {
   const abs = resolveInRepo(repoRoot, rel);
+  // Same allowlist listRepoFiles advertises. Without it the agent could ask for
+  // any path inside the repo by name and put a .env or a key file into a prompt,
+  // and this tool sends prompts to a third-party API.
+  if (!SOURCE_EXT.test(abs)) {
+    throw new Error(`not a source file: ${rel} (readable extensions: ts, tsx, js, jsx, mjs, cjs, sql, prisma)`);
+  }
   if (!existsSync(abs) || !statSync(abs).isFile()) {
     throw new Error(`file not found: ${rel}`);
   }

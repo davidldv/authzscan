@@ -28,17 +28,39 @@ That's one run, not a mean, so there's no error bar on it yet.
 
 The benchmark is a 24-file app, and that number does not carry to a real codebase. A scan of [rallly](https://github.com/lukevella/rallly) produced 11 candidates, of which hand review kept one genuine finding and one harmless missing consistency check. Findings are leads for human review. Finding nothing is not the same as being safe.
 
+## In CI
+
+`--since` keeps a per-pull-request scan cheap; `--baseline` keeps already-triaged findings from holding the build red.
+
+```yaml
+- uses: actions/checkout@v4
+  with: { fetch-depth: 0 }        # --since needs the base branch in the clone
+- run: npx authzscan@latest scan . --since origin/${{ github.base_ref }} --baseline .authzscan-baseline.json --fail-on medium
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+Adopting it on a repo that already has findings: run it once, review, then `--baseline .authzscan-baseline.json --update-baseline` to freeze what you are not fixing today. Entries key on the endpoint id, so they keep matching as the model's wording moves between runs.
+
+Exit codes are the contract: `0` everything in scope analyzed and nothing confirmed at or above `--fail-on`, `1` confirmed findings, `2` the scan broke or left endpoints unanalyzed. Code `2` is deliberate, since a partial run has no opinion about the endpoints it never reached.
+
 ## Options
 
 | Flag | Default | Description |
 |---|---|---|
 | `--format <md\|sarif\|json>` | `md` | Output format written to stdout. |
+| `--since <ref>` | off | Only analyze endpoints in files that differ from this git ref. |
+| `--baseline <file>` | none | Suppress findings on endpoints recorded in this file. |
+| `--update-baseline` | off | Rewrite `--baseline` from this run's confirmed findings, then exit `0`. |
+| `--fail-on <high\|medium\|low>` | `low` | Lowest confidence that exits `1`. |
 | `--max-endpoints <n>` | all | Cap endpoints analyzed, for a cheap first pass. |
 | `--budget <usd>` | none | Stop before the next endpoint group once estimated spend reaches this. Checked between groups, so it can overshoot by one group. |
 | `--resume` | off | Resume from `.authzscan/` artifacts after an interrupted run. |
 | `--model <id>` | `claude-sonnet-4-6` | Any adaptive-thinking Anthropic model. |
 
-Requires Node 20 or newer and an `ANTHROPIC_API_KEY`. A scan costs real API spend, and cost tracks endpoint groups multiplied by repository size rather than endpoint count. `--budget` stops the run between groups, so treat it as a stop signal rather than a hard ceiling: the measured overshoot on a 650-file repo was $0.81.
+Requires Node 20 or newer and an `ANTHROPIC_API_KEY`. Add `.authzscan/` to your `.gitignore`; reports and resume artifacts are written there inside the scanned repo. A scan costs real API spend, and cost tracks endpoint groups multiplied by repository size rather than endpoint count. `--budget` stops the run between groups, so treat it as a stop signal rather than a hard ceiling: the measured overshoot on a 650-file repo was $0.81.
+
+The trace and verify phases send source to the Anthropic API, restricted to `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.sql` and `.prisma` files inside the scanned directory. Nothing else leaves the machine, and there is no authzscan server or telemetry.
 
 Full docs, the pipeline in detail, and the eval harness: https://github.com/davidldv/authzscan
 

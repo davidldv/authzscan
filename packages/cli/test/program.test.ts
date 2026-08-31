@@ -16,6 +16,10 @@ describe("authzscan CLI", () => {
       format: "md",
       maxEndpoints: undefined,
       budget: undefined,
+      since: undefined,
+      baseline: undefined,
+      updateBaseline: false,
+      failOn: "low",
       resume: false,
       model: "claude-sonnet-4-6",
     });
@@ -27,6 +31,10 @@ describe("authzscan CLI", () => {
       "--format", "sarif",
       "--max-endpoints", "10",
       "--budget", "5",
+      "--since", "origin/main",
+      "--baseline", ".authzscan-baseline.json",
+      "--update-baseline",
+      "--fail-on", "high",
       "--resume",
       "--model", "claude-opus-4-8",
     ]);
@@ -34,9 +42,17 @@ describe("authzscan CLI", () => {
       format: "sarif",
       maxEndpoints: 10,
       budget: 5,
+      since: "origin/main",
+      baseline: ".authzscan-baseline.json",
+      updateBaseline: true,
+      failOn: "high",
       resume: true,
       model: "claude-opus-4-8",
     });
+  });
+
+  it("rejects an invalid --fail-on level", () => {
+    expect(() => parse(["scan", "./repo", "--fail-on", "critical"])).toThrow();
   });
 
   it("rejects invalid format", () => {

@@ -6,7 +6,7 @@ Most access-control bugs aren't "no login." They're a logged-in user reaching *o
 
 authzscan does that reasoning. It reads like a pentest of your authorization logic rather than a linter with an LLM bolted on.
 
-> **Status: portfolio and research tool.** Measured against a seeded benchmark (see [Eval](#eval)). Not hardened for a production security sign-off. Treat what it finds as leads worth a human's time, not a clean bill of health.
+> **Fit for:** an advisory authorization review in CI or before a release, on top of the SAST you already run. Its output is leads worth a reviewer's time, and a confirmed finding is a strong one. It is not a compliance artifact and not a substitute for a pentest, because finding nothing is not the same as being safe. Every number here comes from a real run; see [Eval](#eval).
 
 ---
 
@@ -27,31 +27,39 @@ Degrade loudly, never silently. Endpoints that can't be analyzed are reported as
 
 ## Install
 
-Requires Node 20 or newer and [pnpm](https://pnpm.io), which is deliberate: its dependency resolution is strict by default.
+Requires Node 20 or newer and an Anthropic API key.
 
 ```bash
-git clone https://github.com/davidldv/authzscan.git
-cd authzscan
-pnpm install
+npx authzscan@latest scan ./my-next-app
 ```
 
-Set your Anthropic key for live scans:
+Or pin it as a dev dependency so every developer and every CI run uses the same version:
 
 ```bash
-# PowerShell
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
+npm install --save-dev authzscan
+# or
+pnpm add -D authzscan
+```
+
+Set the key:
+
+```bash
 # bash
 export ANTHROPIC_API_KEY=sk-ant-...
+# PowerShell
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
 ```
+
+Add `.authzscan/` to your `.gitignore`. The scan writes its artifacts and reports there, inside the repo being scanned.
+
+To work on authzscan itself rather than run it, clone the repo and see [Repository layout](#repository-layout).
 
 ---
 
 ## Usage
 
-The CLI runs through `tsx` (source TypeScript, no build step):
-
 ```bash
-pnpm exec tsx packages/cli/src/bin.ts scan <path-to-nextjs-repo>
+authzscan scan <path-to-nextjs-repo>
 ```
 
 ### Options
@@ -59,6 +67,10 @@ pnpm exec tsx packages/cli/src/bin.ts scan <path-to-nextjs-repo>
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--format <md\|sarif\|json>` | `md` | Output format written to stdout. |
+| `--since <ref>` | off | Only analyze endpoints in files that differ from this git ref. The way to run it on a pull request without paying for the whole repo. |
+| `--baseline <file>` | none | Suppress findings on endpoints recorded in this file, so accepted risk does not keep the build red. |
+| `--update-baseline` | off | Rewrite `--baseline` from this run's confirmed findings, then exit `0`. |
+| `--fail-on <high\|medium\|low>` | `low` | Lowest confidence that exits `1`. Findings below it are still reported. |
 | `--max-endpoints <n>` | all | Cap endpoints analyzed (useful for a cheap first pass). |
 | `--budget <usd>` | none | Stop before the next endpoint group once estimated spend reaches this. Checked between groups, not inside one, so it can overshoot by a single group's cost. Measured overshoot on a 650-file repo: $0.81. |
 | `--resume` | off | Resume from `.authzscan/` artifacts after an interrupted run. |
@@ -66,12 +78,74 @@ pnpm exec tsx packages/cli/src/bin.ts scan <path-to-nextjs-repo>
 
 ### Output
 
-The report goes to stdout in whichever `--format` you asked for, and `.authzscan/report.md` plus `.authzscan/results.sarif` are always written into the scanned repo. The exit code is `0` for nothing confirmed, `1` for confirmed findings, and `2` if the scan itself broke, so you can gate a build on it directly.
+The report goes to stdout in whichever `--format` you asked for, and `.authzscan/report.md` plus `.authzscan/results.sarif` are always written into the scanned repo.
+
+The exit code is the CI contract:
+
+| Code | Meaning |
+|------|---------|
+| `0` | Every endpoint in scope was analyzed and nothing at or above `--fail-on` was confirmed. |
+| `1` | At least one confirmed finding at or above `--fail-on`. |
+| `2` | The scan itself broke, ran out of budget, or left endpoints unanalyzed. |
+
+Code `2` is deliberate. A run that only got through half the endpoints has no opinion about the other half, and a scanner that turns "I ran out of budget" into a green check is worse than no scanner.
+
+---
+
+## Use it in CI
+
+Two things make a scanner survive contact with a real team: it has to be cheap enough to run per pull request, and it must not sit red forever on findings that have already been triaged. `--since` handles the first, `--baseline` the second.
+
+Scan only what the pull request touched:
+
+```yaml
+name: authzscan
+on: pull_request
+
+permissions:
+  contents: read
+  security-events: write   # only needed for the SARIF upload below
+
+jobs:
+  authz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # --since needs the base branch in the clone
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx authzscan@latest scan . --since origin/${{ github.base_ref }} --baseline .authzscan-baseline.json --fail-on medium
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .authzscan/results.sarif
+```
+
+A pull request that touches no route handler or Server Action analyzes nothing and costs nothing. When `--since` is on, the summary says so out loud, because endpoints outside the diff were not reviewed and the exit code should not be read as if they were.
+
+### Adopting it on a repo that already has findings
+
+Run it once across the whole repo, review what it found, fix what you're going to fix, then freeze the rest:
 
 ```bash
-pnpm exec tsx packages/cli/src/bin.ts scan ./my-app --format sarif > results.sarif
-# upload results.sarif to GitHub code scanning
+authzscan scan . --baseline .authzscan-baseline.json --update-baseline
 ```
+
+That writes one entry per endpoint that currently has a confirmed finding, with the title and an empty `reason` field for you to fill in during review. Commit it. From then on those endpoints stop failing the build while anything new still does. Entries are keyed on the endpoint id, which is derived from the file path and export name, so a baseline keeps matching across runs even though the model's wording and line numbers move. Move or rename the file and the entry stops matching, which is the right behavior: the code changed, so look again.
+
+### Pinning the version
+
+Scan results depend on the model, and the model is not deterministic. Pin both if you want run-to-run stability worth comparing: `authzscan` as a dev dependency rather than `@latest`, and an explicit `--model`. Expect some drift regardless. Treat a single run as evidence, not as a measurement.
+
+### What leaves your machine
+
+The trace and verify phases send source code to the Anthropic API. The agent can list, grep and read files under the scanned directory, restricted to `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.sql` and `.prisma`, and skipping `node_modules`, `.git`, `.next`, `dist` and `.authzscan`. Paths outside the scanned directory are refused, and so is any other file type, so a `.env` or a key file cannot be pulled into a prompt. In practice it reads the endpoints under review and the files they reach, but treat that whole matching source tree as in scope.
+
+Inventory and render run locally and send nothing. There is no authzscan server, no telemetry, and no network destination other than the Anthropic API. It is your key, your account, and your organization's data retention terms. If your source cannot go to a third-party API, this tool is not for you.
 
 ---
 
