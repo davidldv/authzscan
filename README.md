@@ -1,12 +1,65 @@
 # authzscan
 
-Object-level authorization review for Next.js App Router repos, driven by Claude agents.
+Finds the IDOR and BOLA bugs in a Next.js App Router codebase, for the engineer who has to sign off on authorization before a release.
 
 Most access-control bugs aren't "no login." They're a logged-in user reaching *other people's* data. An endpoint fetches `orders/[id]` keyed only on the client-supplied `id`, with no `WHERE userId = session.user`, and user A reads user B's order. That's [OWASP A01: Broken Access Control](https://owasp.org/Top10/A01_2021-Broken_Access_Control/), the top web risk, and pattern-matching SAST tools (Semgrep, Snyk, Copilot) largely miss it. Deciding *whose* data a query returns means reasoning about the code, not matching syntax against it.
 
 authzscan does that reasoning. It reads like a pentest of your authorization logic rather than a linter with an LLM bolted on.
 
-> **Fit for:** an advisory authorization review in CI or before a release, on top of the SAST you already run. Its output is leads worth a reviewer's time, and a confirmed finding is a strong one. It is not a compliance artifact and not a substitute for a pentest, because finding nothing is not the same as being safe. Every number here comes from a real run; see [Eval](#eval).
+> **Fit for:** an advisory authorization review in CI or before a release, on top of the SAST you already run. Its output is leads worth a reviewer's time, and a confirmed finding is a strong one. It is not a compliance artifact and not a substitute for a pentest, because finding nothing is not the same as being safe. Every number here comes from a real run; see [Does it actually find bugs](#does-it-actually-find-bugs).
+
+---
+
+## Does it actually find bugs
+
+The benchmark is a Next.js app carrying 16 planted IDOR/BOLA bugs next to 6 hardened twins: near-identical endpoints that are correctly scoped, sitting there to catch a tool that cries wolf. There is no label leakage. Nothing in the source says `// VULN` for the agent to grep.
+
+Measured on `claude-sonnet-4-6`, single run, 2026-08-25:
+
+| | |
+|---|---|
+| Planted bugs found | 16 of 16, a **100% detection rate** |
+| Missed | 0 |
+| False positives | 0, out of 17 confirmed findings |
+| Hardened twins wrongly flagged | 0 of 6 |
+| By difficulty | easy 6/6, medium 6/6, hard 4/4 |
+| Cost | $2.10 per scan |
+| Wall clock | about 19 minutes |
+| Gates (80% recall, 70% precision) | both pass |
+
+Every planted bug, and what kind of bug it is:
+
+| ID | Bug class | Difficulty | Found |
+|---|---|---|---|
+| V1 | direct fetch by client id, session checked but query unscoped | easy | yes |
+| V2 | direct fetch by client id, no auth at all | easy | yes |
+| V3 | delete by client id, no ownership check | easy | yes |
+| V4 | update by client id, no ownership check | easy | yes |
+| V5 | Server Action deletes by client id, no ownership check | easy | yes |
+| V6 | direct fetch by client id, no auth at all | easy | yes |
+| V7 | GET scoped to the user, DELETE in the same file is not | medium | yes |
+| V8 | mutates the userId the client sent, not the session's | medium | yes |
+| V9 | list filtered by the client's tenant id, no membership check | medium | yes |
+| V10 | ownership transfer that never checks the caller owns it | medium | yes |
+| V11 | Server Action checks the session exists, never ownership | medium | yes |
+| V12 | ownership compared after the write already landed | medium | yes |
+| V13 | reached through a relation, the parent is never checked | hard | yes |
+| V14 | raw SQL scoped by a client-supplied account id | hard | yes |
+| V15 | ownership checked against the recipient, not the caller | hard | yes |
+| V16 | membership lookup omits the caller, so any row passes | hard | yes |
+
+Now the parts that number does not cover, because publishing a benchmark result without its caveats is worth about as much as not publishing one.
+
+It is a single run, not a mean across many, so there is no error bar on it. It would move on another model. Two of the 17 confirmed findings landed on the same planted bug, since a route handler and its Server Action share one file, so the run confirmed 16 distinct bugs rather than 17. And a benchmark somebody wrote on purpose is easier than a codebase that grew by accident. For what a real repository looks like, see [Scope and limits](#scope-and-limits).
+
+The harness gets checked separately from the model. A `PerfectRunner` oracle answers straight out of the manifest and has to score 1.0 / 1.0, which proves the scoring is right no matter how the model performs. The live eval scans a temp copy of the benchmark with `vulns.json` removed, so the agent under test can never reach the answer key.
+
+```bash
+pnpm eval:fake          # zero-cost harness sanity check (PerfectRunner oracle)
+pnpm eval --runs 3      # live eval on Sonnet 4.6, costs real API spend
+```
+
+Reports land in `eval-reports/`.
 
 ---
 
@@ -22,6 +75,14 @@ A four-phase pipeline. Only phases 2 and 3 call the model; phase 1 is fully dete
 | **4. Render** | Emit a Markdown report, [SARIF 2.1.0](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning) (GitHub code scanning), or JSON, plus a CI exit code. | Deterministic |
 
 Degrade loudly, never silently. Endpoints that can't be analyzed are reported as *not analyzed*, never as "clean," and candidates the verify pass can't confirm surface as low-confidence `UNVERIFIED` instead of being dropped. A scanner that turns "I ran out of budget" into a green check is worse than no scanner, because someone will believe it.
+
+### Why phase 1 has no model in it
+
+Enumerating route handlers is a parsing problem, and parsing problems have right answers. `ts-morph` walks the AST and returns the same endpoint list every time, in about a second, for nothing. An agent asked to do that same job would cost money, take minutes, and occasionally miss a file. There is no upside.
+
+Deciding whether `prisma.order.findUnique({ where: { id } })` lets user A read user B's order is a different kind of question. The answer depends on what middleware did three files away, on whether `id` got rewritten between the route and the query, and on the ownership idiom this particular codebase happens to use, which might be `WHERE userId`, or a `withOwner()` helper, or a Prisma extension nobody documented. Grep cannot decide that, and neither can a rule written by someone who has never seen the repo.
+
+So the rule the pipeline follows is: deterministic wherever the question has a right answer, a model only where judgment is actually required, then a second model pass whose only job is to argue with the first. Trace is rewarded for suspicion, verify for skepticism. Collapse them into one pass and you get a wall of maybes, which is how most LLM security tools end up unused.
 
 ---
 
@@ -146,35 +207,6 @@ Scan results depend on the model, and the model is not deterministic. Pin both i
 The trace and verify phases send source code to the Anthropic API. The agent can list, grep and read files under the scanned directory, restricted to `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.sql` and `.prisma`, and skipping `node_modules`, `.git`, `.next`, `dist` and `.authzscan`. Paths outside the scanned directory are refused, and so is any other file type, so a `.env` or a key file cannot be pulled into a prompt. In practice it reads the endpoints under review and the files they reach, but treat that whole matching source tree as in scope.
 
 Inventory and render run locally and send nothing. There is no authzscan server, no telemetry, and no network destination other than the Anthropic API. It is your key, your account, and your organization's data retention terms. If your source cannot go to a third-party API, this tool is not for you.
-
----
-
-## Eval
-
-The benchmark is a Next.js app carrying 16 planted IDOR/BOLA bugs (6 easy, 6 medium, 4 hard) next to 6 hardened twins: near-identical endpoints that are correctly scoped, sitting there to catch a tool that cries wolf. There's no label leakage, since nothing in the source says `// VULN` for the agent to grep. Recall is bugs found over 16, precision is true positives over everything confirmed, and the gates are 80% recall and 70% precision.
-
-Measured on `claude-sonnet-4-6`, single run, 2026-08-25:
-
-| | |
-|---|---|
-| Recall | 100.0% (16/16) |
-| Precision | 100.0% (17 confirmed, 0 false positives, 0 unknowns) |
-| By difficulty | easy 6/6, medium 6/6, hard 4/4 |
-| Hardened twins flagged | 0 of 6 |
-| Cost | $2.10 per scan |
-| Wall clock | about 19 minutes |
-| Gates | both pass |
-
-What that number doesn't cover: it's one run, not a mean across many, so there's no error bar on it yet. It would move on another model. Two of the 17 confirmed findings landed on the same planted bug, because a route handler and its Server Action live in one file, so the run confirmed 16 distinct bugs rather than 17. And a benchmark somebody wrote on purpose is easier than a codebase that grew by accident.
-
-The harness gets checked separately. A `PerfectRunner` oracle answers straight out of the manifest and has to score 1.0 / 1.0, which proves the scoring is right no matter how the model performs. The live eval scans a temp copy of the benchmark with `vulns.json` removed, so the agent under test can never reach the answer key.
-
-```bash
-pnpm eval:fake          # zero-cost harness sanity check (PerfectRunner oracle)
-pnpm eval --runs 3      # live eval on Sonnet 4.6, costs real API spend
-```
-
-Reports land in `eval-reports/`.
 
 ---
 
